@@ -1,0 +1,45 @@
+#include "server.h"
+
+Server::Server(QObject *parent) : QObject(parent)
+{
+    tcpServer=new QTcpServer(this);
+    tcpServer->close();
+    tcpServer->listen(QHostAddress::LocalHost,8888);
+    connect(tcpServer,SIGNAL(newConnection()),this,SLOT(slotnewConnectPedding()));
+
+
+}
+
+void Server::slotReadFinished()
+{
+ qDebug()<<"finished";
+}
+
+void Server::slotReadBytes()
+{
+    //    1命令
+    //    2数据
+    //    3文件
+    //    1 byte+ 4 int 消息体大小+消息体
+    qDebug()<<"read bytes";
+    qDebug()<<tcpNewConnect->readBufferSize();
+    tcpNewConnect->readAll();
+
+    /*qint64 bytesavailable=tcpNewConnect->bytesAvailable();
+    if(bytesavailable<(1+4))return;
+    qDebug()<<"byteavi bytes "<<bytesavailable<<" "<<tcpNewConnect->read(5) ;
+    */
+}
+
+void Server::slotnewConnectPedding()
+{
+    /*if(tcpServer->hasPendingConnections())
+    {
+        return;
+    }*/
+    //qDebug()<<tcpNewConnect->isOpen()<<tcpNewConnect->isValid();
+    tcpNewConnect=tcpServer->nextPendingConnection();
+    connect(tcpNewConnect,SIGNAL(readyRead()),this,SLOT(slotReadBytes()));
+    connect(tcpNewConnect,SIGNAL(readChannelFinished()),this,SLOT(slotReadFinished()));
+}
+

@@ -1,0 +1,146 @@
+#include "widget.h"
+#include "ui_widget.h"
+#include<qdir>
+#include<QJsonDocument>
+
+#include<QJsonObject>
+#include<QJsonArray>
+Widget::Widget(QWidget *parent) :
+    QWidget(parent),
+    ui(new Ui::Widget),isconnect(false)
+{
+    ui->setupUi(this);
+    server=new Server();
+    client=new Client();
+    threadClient=new QThread();
+    threadServer=new QThread();
+    server->moveToThread(threadServer);
+    client->moveToThread(threadClient);
+    threadServer->start();
+    threadClient->start();
+    //connect(this,SIGNAL(destroyed(QObject*)),server,SLOT(deleteLater()));
+    //connect(tcpServer,SIGNAL(newConnection()),this,SLOT(newConnectPedding()));
+    connect(this,SIGNAL(destroyed(QObject*)),threadClient,SLOT(deleteLater()));
+    connect(threadClient,SIGNAL(destroyed(QObject*)) ,threadServer,SLOT(deleteLater()));
+    connect(this,SIGNAL(signalSendData(QByteArray)) ,client,SLOT(sendData(QByteArray)));
+    connect(server,SIGNAL(signalShowByteArray(QByteArray)),this,SLOT(slotShowByteArray(QByteArray)));
+
+    qDebug()<<this->thread()->currentThreadId()<<client->thread()->currentThreadId()<<server->thread()->currentThreadId();
+#if 0
+    listFile= getModels(QDir::drives().at(1).path());
+    QString modelJson=QString("{\"root\":\"%1\",\"files\":[").arg(QDir::drives().at(1).path());
+    for (int var = 0; var < listFile.size(); ++var) {
+        modelJson.append(listFile.at(var)->getJsonArray()).append(",");
+    }
+    modelJson= modelJson.remove(modelJson.length()-1,1);
+    modelJson.append("]}");
+    parseJsonToModel(modelJson);
+#endif
+}
+
+Widget::~Widget()
+{
+    if(threadClient->isRunning())threadClient->deleteLater();
+    if(threadServer->isRunning())threadServer->deleteLater();
+    delete ui;
+}
+
+QList<FileModel *> Widget::getModels(const QString &path)
+{
+    QList<FileModel *>list;
+    /*QFileInfo fileInfo=QDir::drives().at(1);//current computer fileINFO is D:/
+    */
+    QDir dir;
+    dir.setCurrent(path);
+    foreach (QFileInfo info, dir.entryInfoList()) {
+        FileModel *model=new FileModel;
+        model->setName(info.fileName());
+        model->setIsDir(info.isDir());
+        model->setPath(info.path());
+        model->setSize(info.size());
+        list.append(model);
+    }
+
+    return list;
+}
+
+void Widget::parseJsonToModel(const QString &json)
+{
+    QJsonParseError error;
+    QJsonDocument document=QJsonDocument::fromJson(json.toUtf8(),&error);
+    if(error.error==QJsonParseError::NoError)
+    {
+        if(document.isObject())
+        {
+            QJsonObject object=document.object();
+            if(object.contains("root"))
+            {
+                QJsonValue value= object.take("root");
+                //qDebug()<<"root:"<<value.toString();
+            }
+            if(object.contains("files"))
+            {
+
+                QJsonValue value=object.take("files");
+
+                if(value.isArray())
+                {
+                    QJsonArray array=value.toArray();
+                    for (int var = 0; var < array.size(); ++var) {
+                        QJsonObject obj=array.at(var).toObject();
+                        if(obj.contains("isDir"))qDebug()<<obj.take("isDir").toString();
+                        if(obj.contains("name"))qDebug()<<obj.take("name").toString();
+                        if(obj.contains("path"))qDebug()<<obj.take("path").toString();
+                        if(obj.contains("size"))qDebug()<<obj.take("size").toString();
+                    }
+                }
+
+            }
+        }
+    }else qDebug()<<"error json";
+}
+
+void Widget::on_pushButton_clicked()
+{
+    ui->label->clear();
+#if 0
+    if(tcpServer->hasPendingConnections())
+    {
+        return;
+    }
+
+
+
+    tcpClient->connectToHost(QHostAddress::LocalHost,tcpServer->serverPort());
+
+    ui->label->setText(" connect to host ");
+#endif
+}
+
+void Widget::on_btn_sersend_clicked()
+{
+
+
+    QByteArray array;
+
+
+    for (int var = 0; var < 101; ++var) {
+         QByteArray arrayData;
+        array.resize(1+sizeof(int));
+        arrayData.append(QString::number(var));
+        int dataSize=arrayData.size();
+        uchar type=1;
+        memcpy(array.data(),&type,sizeof(uchar));
+        memcpy(array.data()+1,&dataSize,sizeof(int));
+        array.append(arrayData);
+        qDebug()<<"send "<<array.size()<<" "<<array<<" "<<arrayData.size();
+        emit signalSendData(array);
+    }
+}
+
+void Widget::slotShowByteArray(const QByteArray &array)
+{
+//qDebug()<<" size "<<array.length()<<array;
+    this->ui->txt_dir->append(QString(array));
+}
+
