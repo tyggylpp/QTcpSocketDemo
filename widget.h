@@ -10,20 +10,27 @@
 #include<QAbstractTableModel>
 #include<QTableView>
 #include<QFileIconProvider>
+#include<delegate.h>
 
 class TableFilesModel :public QAbstractTableModel
 {
+    Q_OBJECT
 public:
 
     TableFilesModel(QList<FileModel> const list=QList<FileModel>());
     void reFreshModel(QList<FileModel> const list=QList<FileModel>());
+    bool setData(const QModelIndex &index, const QVariant &value, int role);
+    Qt::ItemFlags flags(const QModelIndex &index) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     int rowCount(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent) const;
     QVariant data(const QModelIndex &index, int role) const;
 private:
+    QList<bool>listCheck;
     QStringList horizonHead;
     QList<FileModel>listData;
+public slots:
+    void onStateChanged(int state);
 };
 namespace Ui {
 class Widget;
@@ -61,7 +68,7 @@ private:
     QList<FileModel>listFile;
     QTableView *table_Files;
     TableFilesModel *tableFilesModel;
-
+    Delegate *delegate;
     const QByteArray ParseDataToSocketStream(const uchar &type, const int &length, const QByteArray &array);
 };
 

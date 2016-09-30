@@ -18,13 +18,15 @@ SOURCES += main.cpp\
     server.cpp \
     client.cpp \
     jsonhelper.cpp \
-    driver.cpp
+    driver.cpp \
+    delegate.cpp
 
 HEADERS  += widget.h \
     filemodel.h \
     server.h \
     client.h \
     jsonhelper.h \
-    driver.h
+    driver.h \
+    delegate.h
 
 FORMS    += widget.ui

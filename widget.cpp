@@ -25,7 +25,8 @@ Widget::Widget(QWidget *parent) :
     this->table_Files->setModel(tableFilesModel);
     this->table_Files->setShowGrid(false);
     this->table_Files->setSelectionBehavior(QAbstractItemView::SelectRows);
-
+    delegate=new Delegate(table_Files);
+    table_Files->setItemDelegate(delegate);
     connect(table_Files,SIGNAL(doubleClicked(QModelIndex)),this,SLOT(slotdoubleClicked(QModelIndex)));
     //connect(this,SIGNAL(destroyed(QObject*)),server,SLOT(deleteLater()));
     //connect(tcpServer,SIGNAL(newConnection()),this,SLOT(newConnectPedding()));
@@ -212,7 +213,36 @@ void TableFilesModel::reFreshModel(const QList<FileModel> list)
 {
     this->beginResetModel();
     this->listData=list;
+    for (int var = 0; var < list.length(); ++var) {
+        listCheck.append(false);
+    }
     this->endResetModel();
+}
+
+bool TableFilesModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+  if(!index.isValid())return false;
+  if(index.column()==0)
+  {
+      if(role==Qt::CheckStateRole||role==Qt::UserRole)
+      {
+       listCheck.replace(index.row(),value.toBool());
+       emit dataChanged(index,index);
+       return true;
+      }
+  }
+  return false;
+}
+
+Qt::ItemFlags TableFilesModel::flags(const QModelIndex &index) const
+{
+  if(!index.isValid())return QAbstractItemModel::flags(index);
+  if(index.column()==0)
+  {
+      return Qt::ItemIsUserCheckable|Qt::ItemIsEnabled;
+  }
+  Qt::ItemFlags flags=Qt::ItemIsUserCheckable|Qt::ItemIsSelectable|Qt::ItemIsEnabled;
+  return flags;
 }
 
 QVariant TableFilesModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -242,7 +272,10 @@ QVariant TableFilesModel::data(const QModelIndex &index, int role) const
     if(!index.isValid())return QVariant();
     if(index.column()==0)
     {
-        if(role==Qt::CheckStateRole)return Qt::CheckStateRole;
+          if(role==Qt::UserRole)
+          {
+              return listCheck.at(index.row());
+          }
     }else if(index.column()==1)
     {
         if(role==Qt::DisplayRole)return listData.at(index.row()).getName();
@@ -272,18 +305,19 @@ QVariant TableFilesModel::data(const QModelIndex &index, int role) const
             else{
                 if(listData.at(index.row()).getSize()>0)
                 {
-                      qint64 size=listData.at(index.row()).getSize()/1024;
-                      return size>1?QString("%1KB").arg(size):QString("1KB");
+                    qint64 size=listData.at(index.row()).getSize()/1024;
+                    return size>1?QString("%1KB").arg(size):QString("1KB");
                 }else
                 {
                     return QString("0KB");
                 }
             }
         }
-    }else if(index.column()==4)
-    {
-
-        //if(role==Qt::DisplayRole)return listData.at(index.row()).getName();
     }
     return QVariant();
+}
+
+void TableFilesModel::onStateChanged(int state)
+{
+
 }
